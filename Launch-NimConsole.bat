@@ -2,7 +2,7 @@
 title NVIDIA NIM Console & Auto-Sync
 cd /d "%~dp0"
 
-:: 1. Launch silent background auto-sync thread
+:: 1. Launch silent background auto-sync thread (polling every 15 minutes / 900 seconds)
 start /b powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {
     $repo = $PSScriptRoot
     while ($true) {
@@ -21,7 +21,7 @@ start /b powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {
                 }
             }
         } catch {}
-        Start-Sleep -Seconds 45
+        Start-Sleep -Seconds 900
     }
 }"
 
