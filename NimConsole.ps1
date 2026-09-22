@@ -17,6 +17,11 @@ if ([string]::IsNullOrWhiteSpace($ApiKey)) {
 
 $Model = "nvidia/nemotron-3.5-lightning-30b-a3b"
 $Url   = "https://integrate.api.nvidia.com/v1/chat/completions"
+$CurrentDir = (Get-Location).Path
+$GitRemote  = (git config --get remote.origin.url 2>$null)
+if (-not $GitRemote) { $GitRemote = "https://github.com/jonathanblunt1214-lgtm/NVIDIA-NIM-CONSOLE.git" }
+$GitBranch  = (git branch --show-current 2>$null)
+if (-not $GitBranch) { $GitBranch = "main" }
 
 $SystemPrompt = @"
 You are the NVIDIA NIM Agentic Console assistant.
@@ -30,10 +35,15 @@ $Messages = [System.Collections.Generic.List[hashtable]]::new()
 $Messages.Add(@{ role = "system"; content = $SystemPrompt })
 
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "       NVIDIA NIM AGENTIC CONSOLE [ACTIVE]" -ForegroundColor Green
+Write-Host "       NVIDIA NIM AGENTIC GIT CONSOLE" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "Model  : $Model"
-Write-Host "Time   : $(Get-ConsoleTimestamp)`n"
+Write-Host "Model       : $Model"
+Write-Host "Directory   : $CurrentDir"
+Write-Host "Git Remote  : $GitRemote"
+Write-Host "Git Branch  : $GitBranch"
+Write-Host "Time        : $(Get-ConsoleTimestamp)"
+Write-Host "Commands    : Type 'exit' to quit, 'clear' to reset."
+Write-Host "----------------------------------------------------------`n"
 
 while ($true) {$userInput = Read-Host "You"
     if ([string]::IsNullOrWhiteSpace($userInput)) { continue }
