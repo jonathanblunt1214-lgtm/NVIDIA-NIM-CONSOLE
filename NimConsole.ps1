@@ -5,7 +5,6 @@
     return $out.Trim()
 }
 
-function Set-ReasoningIndicator([bool]$Active) {
     if ($Active) {
         $Global:AnimCancel = [System.Threading.CancellationTokenSource]::new()
         $token = $Global:AnimCancel.Token
@@ -321,7 +320,6 @@ while ($true) {
     }
 
     $Messages.Add(@{ role = "user"; content = $userInput })
-    Set-ReasoningIndicator $true
 
     try {
         $body = @{
@@ -331,15 +329,7 @@ while ($true) {
             temperature = 0.2
         } | ConvertTo-Json -Depth 5
 
-        $headers = @{
-            "Authorization" = "Bearer $ApiKey"
-            "Content-Type"  = "application/json"
-        }
 
-        $res = Invoke-RestMethod -Uri $Url -Method Post -Headers $headers -Body $body -TimeoutSec 90
-        $aiReply = $res.choices[0].message.content.Trim()
-
-        Set-ReasoningIndicator $false
 
         $ts = Get-ConsoleTimestamp
         Write-Host "$ts AI > " -ForegroundColor Cyan -NoNewline
@@ -348,7 +338,6 @@ while ($true) {
         $Messages.Add(@{ role = "assistant"; content = $aiReply })
     }
     catch {
-        Set-ReasoningIndicator $false
         Write-Host "`n[Error]: $($_.Exception.Message)`n" -ForegroundColor Red
     }
 }
