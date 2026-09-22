@@ -1,4 +1,56 @@
 ﻿# =====================================================================
+# ANIMATED PROGRESS BAR ENGINE (Sweeping White across Green)
+# =====================================================================
+function Invoke-AnimatedReasoning {
+    param(
+        [scriptblock]$TaskScriptBlock,
+        [string]$Label = "AI is reasoning"
+    )
+
+    $job = Start-Job -ScriptBlock $TaskScriptBlock
+    $esc = [char]27
+    $width = 24
+    $pos = 0
+    $direction = 1
+
+    # Hide cursor during animation
+    [Console]::CursorVisible = $false
+
+    try {
+        while ($job.State -eq "Running") {
+            # Build bar: green background track with sweeping white highlight
+            $barLeft  = "=" * $pos
+            $barRight = "=" * ($width - $pos - 1)
+
+            Write-Host -NoNewline "`r   $Label [" -ForegroundColor Gray
+            Write-Host -NoNewline "$barLeft" -ForegroundColor DarkGreen
+            Write-Host -NoNewline "█" -ForegroundColor White
+            Write-Host -NoNewline "$barRight" -ForegroundColor DarkGreen
+            Write-Host -NoNewline "] " -ForegroundColor Gray
+
+            # Bounce animation across bar
+            $pos +=$direction
+            if ($pos -ge ($width - 1)) {
+                $pos =$width - 1
+                $direction = -1             } elseif ($pos -le 0) {
+                $pos = 0$direction = 1
+            }
+
+            Start-Sleep -Milliseconds 45
+        }
+
+        # Clear line completely when job completes
+        Write-Host -NoNewline ("`r" + (" " * ([Console]::WindowWidth - 1)) + "`r")
+        $result = Receive-Job -Job$job
+        return $result
+    }
+    finally {
+        [Console]::CursorVisible = $true
+        Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+    }
+}
+# =====================================================================
+# =====================================================================
 # CONTINUATION-RESOLUTION & SESSION PERSISTENCE HOOK
 # =====================================================================
 $stateFile = Join-Path $PSScriptRoot ".nim_session_state.json"
