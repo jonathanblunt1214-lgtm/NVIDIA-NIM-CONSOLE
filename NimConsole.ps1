@@ -1,5 +1,48 @@
-﻿# =====================================================================
+﻿function Remove-ThinkingTrace([string]$text) {
+    if (-not $text) { return "" }
+    $out = $text -replace '(?s)<think>.*?</think>', ''$out = $out -replace '(?s)Here''s a thinking process:.*?(\r?\n\r?\n\vert{}$)', ''
+    return $out.Trim()
+}
+# =====================================================================
 # ANIMATED PROGRESS BAR ENGINE (Sweeping White across Green)
+# =====================================================================
+function Invoke-AnimatedReasoning {
+    param(
+        [scriptblock]$TaskScriptBlock,
+        [string]$Label = "AI is reasoning"
+    )
+    $job = Start-Job -ScriptBlock$TaskScriptBlock
+    $width = 24
+$pos = 0
+    $direction = 1
+    [Console]::CursorVisible =$false
+    try {
+        while ($job.State -eq "Running") {
+            $barLeft  = "=" * $pos
+            $barRight = "=" * ($width -$pos - 1)
+            Write-Host -NoNewline "`r   $Label [" -ForegroundColor Gray
+            Write-Host -NoNewline "$barLeft" -ForegroundColor DarkGreen
+            Write-Host -NoNewline ([char]0x2588) -ForegroundColor White
+            Write-Host -NoNewline "$barRight" -ForegroundColor DarkGreen
+            Write-Host -NoNewline "] " -ForegroundColor Gray
+            $pos += $direction
+            if ($pos -ge ($width - 1)) {
+                $pos = $width - 1
+                $direction = -1
+            } elseif ($pos -le 0) {
+                $pos = 0
+                $direction = 1
+            }
+            Start-Sleep -Milliseconds 45
+        }
+        Write-Host -NoNewline ("`r" + (" " * ([Console]::WindowWidth - 1)) + "`r")
+        return (Receive-Job -Job $job)
+    }
+    finally {
+        [Console]::CursorVisible = $true
+        Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+    }
+}
 # =====================================================================
 function Invoke-AnimatedReasoning {
     param(
@@ -94,9 +137,9 @@ function Get-ConsoleTimestamp {
 
 function Set-ReasoningIndicator([bool]$Active) {
     if ($Active) {
-        Write-Host -NoNewline "`r`e[KAI is reasoning... " -ForegroundColor Green
+        
     } else {
-        Write-Host -NoNewline "`r`e[K"
+        Write-Host -NoNewline "`r"
     }
 }
 
