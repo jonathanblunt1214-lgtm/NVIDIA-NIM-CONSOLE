@@ -1,31 +1,11 @@
 @echo off
-title NVIDIA NIM Console & Auto-Sync
+title "NVIDIA NIM Console & Auto-Sync"
 cd /d "%~dp0"
 
-:: 1. Launch silent background auto-sync thread (polling every 15 minutes / 900 seconds)
-start /b powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {
-    $repo = $PSScriptRoot
-    while ($true) {
-        try {
-            git -C $repo fetch origin main --quiet 2>$null
-            $local = (git -C $repo rev-parse HEAD 2>$null)
-            $remote = (git -C $repo rev-parse origin/main 2>$null)
-            if ($local -and $remote -and ($local -ne $remote)) {
-                $dirty = (git -C $repo status --porcelain 2>$null)
-                if ($dirty) {
-                    git -C $repo stash push -m 'auto-sync-stash' --quiet 2>$null
-                    git -C $repo pull --rebase origin main --quiet 2>$null
-                    git -C $repo stash pop --quiet 2>$null
-                } else {
-                    git -C $repo pull --rebase origin main --quiet 2>$null
-                }
-            }
-        } catch {}
-        Start-Sleep -Seconds 900
-    }
-}"
+:: 1. Launch silent background sync daemon (15 min interval)
+start "" /b powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%~dp0SyncDaemon.ps1"
 
-:: 2. Launch interactive NIM Console with persistent session restoration
+:: 2. Launch interactive console with session persistence
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0NimConsole.ps1"
 
 pause
