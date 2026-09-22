@@ -10,6 +10,58 @@ function Set-ReasoningIndicator([bool]$Active) {
     }
 }
 
+function Get-RemoteBranches {
+    Write-Host "Querying GitHub remote..." -ForegroundColor DarkGray
+    $raw = git ls-remote --heads origin 2>$null
+    $branches = @()
+    if ($raw) {
+        foreach ($line in $raw) {
+            if ($line -match 'refs/heads/(.+)$') {
+                $branches += $matches[1].Trim()
+            }
+        }
+    }
+    return $branches
+}
+
+function Select-GitHubBranch {
+    $branches = Get-RemoteBranches
+    if ($branches.Count -eq 0) {
+        Write-Host "No remote branches found or remote unreachable." -ForegroundColor Red
+        Start-Sleep -Seconds 1
+        return $null
+    }
+
+    Write-Host "`nAvailable branches on GitHub:" -ForegroundColor Yellow
+    for ($i = 0; $i -lt $branches.Count; $i++) {
+        Write-Host ("  [{0}] {1}" -f ($i + 1), $branches[$i]) -ForegroundColor Cyan
+    }
+    Write-Host ""
+    $choice = Read-Host "Select branch number (or Enter to cancel)"
+    if ($choice -match '^\d+$') {
+        $idx = [int]$choice - 1
+        if ($idx -ge 0 -and$idx -lt $branches.Count) {$selected = $branches[$idx]
+
+            # Auto-stash check: inspect working tree for unstaged/staged dirty files
+            $status = git status --porcelain 2>$null
+            if ($status) {
+                $stashTag = "auto-stash-pre-branch-$([DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss'))"
+                Write-Host "Uncommitted local changes detected. Creating stash: $stashTag..." -ForegroundColor Yellow
+                git stash push --include-untracked -m $stashTag 2>$null
+                Write-Host "Work stashed safely." -ForegroundColor Green
+            }
+
+            Write-Host "Switching to origin/$selected and aligning local tree..." -ForegroundColor Green
+            git fetch origin $selected 2>$null
+            git checkout -B $selected "origin/$selected" --force 2>$null
+            git reset --hard "origin/$selected" 2>$null
+            Start-Sleep -Seconds 1
+            return $selected
+        }
+    }
+    return $null
+}
+
 function Render-Banner {
     Clear-Host
     $blockWidth = 75
@@ -23,8 +75,12 @@ function Render-Banner {
     $curDir = (Get-Location).Path
     $curRemote = (git config --get remote.origin.url 2>$null)
     if (-not $curRemote) {$curRemote = "No remote configured" }
-    $curBranch = (git branch --show-current 2>$null)
-    if (-not $curBranch) {$curBranch = "HEAD (detached)" }
+    
+    $remoteBranch = (git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>$null)
+    if (-not $remoteBranch) { 
+        $curBranch = (git branch --show-current 2>$null)
+        $remoteBranch = "origin/$curBranch"
+    }
 
     Write-Host "$margin$divider" -ForegroundColor Green
     Write-Host "$margin$titlePad$title" -ForegroundColor Green
@@ -32,9 +88,9 @@ function Render-Banner {
     Write-Host "$margin$('Model'.PadRight(12)):$Global:Model" -ForegroundColor Cyan
     Write-Host "$margin$('Directory'.PadRight(12)):$curDir" -ForegroundColor DarkGray
     Write-Host "$margin$('Git Remote'.PadRight(12)):$curRemote" -ForegroundColor DarkGray
-    Write-Host "$margin$('Git Branch'.PadRight(12)):$curBranch" -ForegroundColor Yellow
+    Write-Host "$margin$('GitHub Ref'.PadRight(12)):$remoteBranch (synced)" -ForegroundColor Yellow
     Write-Host "$margin$('Time'.PadRight(12)):$(Get-ConsoleTimestamp)" -ForegroundColor Gray
-    Write-Host "$margin$('Commands'.PadRight(12)): :branch <name>, :dir <path>, :remote <url>, 'clear', 'exit'" -ForegroundColor DarkCyan
+    Write-Host "$margin$('Commands'.PadRight(12)): :branch (auto-stash picker), :sync, 'clear', 'exit'" -ForegroundColor DarkCyan
     Write-Host "$margin$subDivider`n" -ForegroundColor Green
 }
 
@@ -71,34 +127,18 @@ while ($true) {
         continue
     }
 
-    # Switch branch command: :branch <name>
-    if ($userInput -like ":branch *") {
-        $targetBranch = ($userInput -split " ")[1]
-        git fetch origin 2>$null
-        git checkout $targetBranch 2>$null
-        if ($LASTEXITCODE -ne 0) {
-            git checkout -b $targetBranch "origin/$targetBranch" 2>$null
-        }
+    if ($userInput -eq ":branch") {
+        $chosen = Select-GitHubBranch
         Render-Banner
         continue
     }
 
-    # Switch directory command: :dir <path>
-    if ($userInput -like ":dir *") {
-        $targetDir = ($userInput -split " ", 2)[1]
-        if (Test-Path $targetDir) {
-            Set-Location -Path $targetDir
-            Render-Banner
-        } else {
-            Write-Host "Directory not found: $targetDir" -ForegroundColor Red
-        }
-        continue
-    }
-
-    # Switch remote command: :remote <url>
-    if ($userInput -like ":remote *") {
-        $targetRemote = ($userInput -split " ")[1]
-        git remote set-url origin $targetRemote
+    if ($userInput -eq ":sync") {
+        Write-Host "Resetting local tree to match GitHub verbatim..." -ForegroundColor DarkGray
+        git fetch origin --prune 2>$null
+        $current = (git branch --show-current 2>$null)
+        git reset --hard "origin/$current" 2>$null
+        Start-Sleep -Seconds 1
         Render-Banner
         continue
     }
