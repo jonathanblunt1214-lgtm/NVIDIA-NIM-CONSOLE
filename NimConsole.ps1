@@ -2,17 +2,14 @@
     if ($Active) {
         $Global:AnimCancel = [System.Threading.CancellationTokenSource]::new()
         $token = $Global:AnimCancel.Token
-
         $Global:AnimTask = [System.Threading.Tasks.Task]::Run([Action]{
             $width = 20
             $pos = 0
             $dir = 1
             [System.Console]::CursorVisible = $false
-
             while (-not $token.IsCancellationRequested) {
                 $left  = "=" * $pos
                 $right = "=" * ($width - $pos - 1)
-
                 [System.Console]::Write("`r   AI is reasoning... [")
                 [System.Console]::ForegroundColor = [System.ConsoleColor]::DarkGreen
                 [System.Console]::Write($left)
@@ -22,10 +19,33 @@
                 [System.Console]::Write($right)
                 [System.Console]::ResetColor()
                 [System.Console]::Write("] ")
-
-                $pos +=$dir
-                if ($pos -ge ($width - 1)) {$pos = $width - 1; $dir = -1 }
+                $pos += $dir
+                if ($pos -ge ($width - 1)) { $pos = $width - 1; $dir = -1 }
                 elseif ($pos -le 0) { $pos = 0; $dir = 1 }
+                [System.Threading.Thread]::Sleep(45)
+            }
+            [System.Console]::CursorVisible = $true
+            $pad = " " * ([Math]::Max(10, [System.Console]::WindowWidth - 1))
+            [System.Console]::Write("`r" + $pad + "`r")
+        }, $token)
+    } else {
+        if ($Global:AnimCancel) {
+            $Global:AnimCancel.Cancel()
+            if ($Global:AnimTask) {
+                try { [void]$Global:AnimTask.Wait(400) } catch {}
+                try { $Global:AnimTask.Dispose() } catch {}
+                $Global:AnimTask = $null
+            }
+            try { $Global:AnimCancel.Dispose() } catch {}
+            $Global:AnimCancel = $null
+        }
+        [System.Console]::CursorVisible = $true
+        $pad = " " * ([Math]::Max(10, [System.Console]::WindowWidth - 1))
+        [System.Console]::Write("`r" + $pad + "`r")
+    }
+}
+
+elseif ($pos -le 0) { $pos = 0; $dir = 1 }
 
                 [System.Threading.Thread]::Sleep(45)
             }
