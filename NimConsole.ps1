@@ -136,13 +136,6 @@ function Get-ConsoleTimestamp {
     return "[{0:yyyy-MM-dd hh:mm tt}]" -f (Get-Date)
 }
 
-function Set-ReasoningIndicator([bool]$Active) {
-    if ($Active) {
-        
-    } else {
-        Write-Host -NoNewline "`r"
-    }
-}
 
 function Get-RemoteBranches {
     Write-Host "Querying GitHub remote..." -ForegroundColor DarkGray
