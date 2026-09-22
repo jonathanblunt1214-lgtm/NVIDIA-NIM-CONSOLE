@@ -10,18 +10,41 @@ function Set-ReasoningIndicator([bool]$Active) {
     }
 }
 
+function Render-Banner {
+    Clear-Host
+    $blockWidth = 75
+    $winWidth =$Host.UI.RawUI.WindowSize.Width
+    if ($winWidth -le 0) { $winWidth = 100 }$padLeft = [Math]::Max(0, [int](($winWidth -$blockWidth) / 2))
+    $margin = " " * $padLeft
+
+    $divider    = "=" * $blockWidth$subDivider = "-" * $blockWidth$title      = "NVIDIA NIM AGENTIC GIT CONSOLE"
+    $titlePad   = " " * [Math]::Max(0, [int](($blockWidth -$title.Length) / 2))
+
+    $curDir = (Get-Location).Path
+    $curRemote = (git config --get remote.origin.url 2>$null)
+    if (-not $curRemote) {$curRemote = "No remote configured" }
+    $curBranch = (git branch --show-current 2>$null)
+    if (-not $curBranch) {$curBranch = "HEAD (detached)" }
+
+    Write-Host "$margin$divider" -ForegroundColor Green
+    Write-Host "$margin$titlePad$title" -ForegroundColor Green
+    Write-Host "$margin$divider" -ForegroundColor Green
+    Write-Host "$margin$('Model'.PadRight(12)):$Global:Model" -ForegroundColor Cyan
+    Write-Host "$margin$('Directory'.PadRight(12)):$curDir" -ForegroundColor DarkGray
+    Write-Host "$margin$('Git Remote'.PadRight(12)):$curRemote" -ForegroundColor DarkGray
+    Write-Host "$margin$('Git Branch'.PadRight(12)):$curBranch" -ForegroundColor Yellow
+    Write-Host "$margin$('Time'.PadRight(12)):$(Get-ConsoleTimestamp)" -ForegroundColor Gray
+    Write-Host "$margin$('Commands'.PadRight(12)): :branch <name>, :dir <path>, :remote <url>, 'clear', 'exit'" -ForegroundColor DarkCyan
+    Write-Host "$margin$subDivider`n" -ForegroundColor Green
+}
+
 $ApiKey = [Environment]::GetEnvironmentVariable("NGC_API_KEY", "User")
 if ([string]::IsNullOrWhiteSpace($ApiKey)) {
     $ApiKey = [Environment]::GetEnvironmentVariable("NGC_API_KEY", "Process")
 }
 
-$Model = "nvidia/nemotron-3.5-lightning-30b-a3b"
+$Global:Model = "nvidia/nemotron-3.5-lightning-30b-a3b"
 $Url   = "https://integrate.api.nvidia.com/v1/chat/completions"
-$CurrentDir = (Get-Location).Path
-$GitRemote  = (git config --get remote.origin.url 2>$null)
-if (-not $GitRemote) { $GitRemote = "https://github.com/jonathanblunt1214-lgtm/NVIDIA-NIM-CONSOLE.git" }
-$GitBranch  = (git branch --show-current 2>$null)
-if (-not $GitBranch) { $GitBranch = "main" }
 
 $SystemPrompt = @"
 You are the NVIDIA NIM Agentic Console assistant.
@@ -34,49 +57,58 @@ RULES:
 $Messages = [System.Collections.Generic.List[hashtable]]::new()
 $Messages.Add(@{ role = "system"; content = $SystemPrompt })
 
-Clear-Host
+Render-Banner
 
-# Calculate shared left-margin to center the entire fixed-width block cleanly
-$blockWidth = 75
-$windowWidth = $Host.UI.RawUI.WindowSize.Width
-if ($windowWidth -le 0) { $windowWidth = 100 }
-$padLeft = [Math]::Max(0, [int](($windowWidth - $blockWidth) / 2))
-$margin = " " * $padLeft
-
-$divider    = "=" * $blockWidth
-$subDivider = "-" * $blockWidth
-$title      = "NVIDIA NIM AGENTIC GIT CONSOLE"
-$titlePad   = " " * [Math]::Max(0, [int](($blockWidth - $title.Length) / 2))
-
-Write-Host "$margin$divider" -ForegroundColor Green
-Write-Host "$margin$titlePad$title" -ForegroundColor Green
-Write-Host "$margin$divider" -ForegroundColor Green
-Write-Host "$margin$('Model'.PadRight(12)): $Model" -ForegroundColor Cyan
-Write-Host "$margin$('Directory'.PadRight(12)): $CurrentDir" -ForegroundColor DarkGray
-Write-Host "$margin$('Git Remote'.PadRight(12)): $GitRemote" -ForegroundColor DarkGray
-Write-Host "$margin$('Git Branch'.PadRight(12)): $GitBranch" -ForegroundColor Yellow
-Write-Host "$margin$('Time'.PadRight(12)): $(Get-ConsoleTimestamp)" -ForegroundColor Gray
-Write-Host "$margin$('Commands'.PadRight(12)): Type 'exit' to quit, 'clear' to reset." -ForegroundColor DarkCyan
-Write-Host "$margin$subDivider`n" -ForegroundColor Green
-
-while ($true) {$userInput = Read-Host "You"
+while ($true) {
+    $userInput = Read-Host "You"
     if ([string]::IsNullOrWhiteSpace($userInput)) { continue }
     if ($userInput -eq "exit" -or $userInput -eq ":q") { break }
+    
     if ($userInput -eq "clear") {
         $Messages.Clear()
         $Messages.Add(@{ role = "system"; content = $SystemPrompt })
-        Clear-Host
-        Write-Host "$margin[Context reset]`n" -ForegroundColor Yellow
+        Render-Banner
+        continue
+    }
+
+    # Switch branch command: :branch <name>
+    if ($userInput -like ":branch *") {
+        $targetBranch = ($userInput -split " ")[1]
+        git fetch origin 2>$null
+        git checkout $targetBranch 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            git checkout -b $targetBranch "origin/$targetBranch" 2>$null
+        }
+        Render-Banner
+        continue
+    }
+
+    # Switch directory command: :dir <path>
+    if ($userInput -like ":dir *") {
+        $targetDir = ($userInput -split " ", 2)[1]
+        if (Test-Path $targetDir) {
+            Set-Location -Path $targetDir
+            Render-Banner
+        } else {
+            Write-Host "Directory not found: $targetDir" -ForegroundColor Red
+        }
+        continue
+    }
+
+    # Switch remote command: :remote <url>
+    if ($userInput -like ":remote *") {
+        $targetRemote = ($userInput -split " ")[1]
+        git remote set-url origin $targetRemote
+        Render-Banner
         continue
     }
 
     $Messages.Add(@{ role = "user"; content = $userInput })
-
     Set-ReasoningIndicator $true
 
     try {
         $body = @{
-            model       = $Model
+            model       = $Global:Model
             messages    = $Messages
             max_tokens  = 200
             temperature = 0.2
