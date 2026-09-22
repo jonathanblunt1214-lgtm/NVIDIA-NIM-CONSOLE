@@ -1,0 +1,55 @@
+﻿name: Crucible & AI Council Gate
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Nim Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout The Crucible
+        uses: actions/checkout@v4
+        with:
+          repository: jonathanblunt1214-lgtm/The-Crucible
+          path: The-Crucible
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout AI-collaboration
+        uses: actions/checkout@v4
+        with:
+          repository: jonathanblunt1214-lgtm/AI-collaboration-
+          path: AI-collaboration-
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run The Crucible Verification Gate
+        shell: pwsh
+        run: |
+          if (Test-Path "./The-Crucible/scripts/crucible-gate.ps1") {
+              ./The-Crucible/scripts/crucible-gate.ps1 -Target "NIM-Console" -StrictMemoryCheck
+          }
+
+      - name: Run AI Council Review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NIM_API_KEY: ${{ secrets.NIM_API_KEY }}
+        run: |
+          git diff HEAD~1 | python ./council_gate.py
