@@ -1,7 +1,6 @@
 ﻿function Get-ConsoleTimestamp {
-    $nowUtc = [DateTime]::UtcNow
-    $month = $nowUtc.Month
-    $offset = if ($month -ge 3 -and $month -lt 11) { -5 } else { -4 }
+    return "[{0:yyyy-MM-dd hh:mm tt}]" -f (Get-Date)
+} else { -4 }
     $localTime = $nowUtc.AddHours($offset)
     return "[{0:yyyy-MM-dd hh:mm tt}]" -f $localTime
 }
@@ -164,4 +163,5 @@ if (Test-Path $sessionContextPath) {
     Write-Host "[Hydrated]: Session memory and protocols loaded successfully." -ForegroundColor Green
 }
 # ---------------------------------------
+
 
