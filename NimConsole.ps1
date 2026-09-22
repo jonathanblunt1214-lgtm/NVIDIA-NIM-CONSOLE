@@ -1,4 +1,42 @@
-﻿function Get-ConsoleTimestamp {
+﻿# =====================================================================
+# CONTINUATION-RESOLUTION & SESSION PERSISTENCE HOOK
+# =====================================================================
+$stateFile = Join-Path $PSScriptRoot ".nim_session_state.json"
+
+function Save-SessionCheckpoint {
+    param([string]$LastPrompt, [string]$LastResponse, [string]$Status="Active")
+    $checkpoint = [PSCustomObject]@{
+        Timestamp    = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+        CommitHash   = (git rev-parse HEAD 2>$null)
+        Branch       = (git rev-parse --abbrev-ref HEAD 2>$null)
+        LastPrompt   = $LastPrompt
+        LastResponse = $LastResponse
+        Status       = $Status
+    }
+    $checkpoint | ConvertTo-Json -Depth 4 | Set-Content -Path $stateFile -Encoding UTF8
+}
+
+function Check-SessionResume {
+    if (Test-Path $stateFile) {
+        try {
+            $prev = Get-Content -Path $stateFile -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($prev.Status -eq "Interrupted" -or $prev.Status -eq "Active") {
+                Write-Host "`n[CONTINUATION DETECTED] Unfinished or interrupted session found from $($prev.Timestamp)" -ForegroundColor Yellow
+                Write-Host "Prior prompt: `"$($prev.LastPrompt)`"" -ForegroundColor DarkGray
+                $ans = Read-Host "Resume previous session state? (Y/n)"
+                if ($ans -notmatch "^[Nn]") {
+                    Write-Host "[RESUMED] Context restored to active memory." -ForegroundColor Green
+                    return $prev
+                }
+            }
+        } catch {}
+    }
+    return $null
+}
+
+$resumedSession = Check-SessionResume
+# =====================================================================
+function Get-ConsoleTimestamp {
     return "[{0:yyyy-MM-dd hh:mm tt}]" -f (Get-Date)
 }
 
