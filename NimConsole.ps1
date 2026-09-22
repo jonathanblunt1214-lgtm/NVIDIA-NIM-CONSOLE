@@ -10,6 +10,13 @@ function Set-ReasoningIndicator([bool]$Active) {
     }
 }
 
+function Write-Centered([string]$Text, [ConsoleColor]$Color = [ConsoleColor]::White) {
+    $width = $Host.UI.RawUI.WindowSize.Width
+    if ($width -le 0) { $width = 80 }
+    $indent = [Math]::Max(0, [int](($width - $Text.Length) / 2))
+    Write-Host (" " * $indent + $Text) -ForegroundColor $Color
+}
+
 $ApiKey = [Environment]::GetEnvironmentVariable("NGC_API_KEY", "User")
 if ([string]::IsNullOrWhiteSpace($ApiKey)) {
     $ApiKey = [Environment]::GetEnvironmentVariable("NGC_API_KEY", "Process")
@@ -34,25 +41,32 @@ RULES:
 $Messages = [System.Collections.Generic.List[hashtable]]::new()
 $Messages.Add(@{ role = "system"; content = $SystemPrompt })
 
-Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "       NVIDIA NIM AGENTIC GIT CONSOLE" -ForegroundColor Green
-Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "Model       : $Model"
-Write-Host "Directory   : $CurrentDir"
-Write-Host "Git Remote  : $GitRemote"
-Write-Host "Git Branch  : $GitBranch"
-Write-Host "Time        : $(Get-ConsoleTimestamp)"
-Write-Host "Commands    : Type 'exit' to quit, 'clear' to reset."
-Write-Host "----------------------------------------------------------`n"
+Clear-Host
+$divider = "=" * 60
+$subDivider = "-" * 60
 
-while ($true) {$userInput = Read-Host "You"
+Write-Centered $divider Green
+Write-Centered "NVIDIA NIM AGENTIC GIT CONSOLE" Green
+Write-Centered $divider Green
+Write-Centered ("Model       : " + $Model) Cyan
+Write-Centered ("Directory   : " + $CurrentDir) DarkGray
+Write-Centered ("Git Remote  : " + $GitRemote) DarkGray
+Write-Centered ("Git Branch  : " + $GitBranch) Yellow
+Write-Centered ("Time        : " + (Get-ConsoleTimestamp)) Gray
+Write-Centered "Commands    : Type 'exit' to quit, 'clear' to reset." DarkCyan
+Write-Centered $subDivider Green
+Write-Host ""
+
+while ($true) {
+    $userInput = Read-Host "You"
     if ([string]::IsNullOrWhiteSpace($userInput)) { continue }
     if ($userInput -eq "exit" -or $userInput -eq ":q") { break }
     if ($userInput -eq "clear") {
         $Messages.Clear()
         $Messages.Add(@{ role = "system"; content = $SystemPrompt })
         Clear-Host
-        Write-Host "Context reset.`n" -ForegroundColor Yellow
+        Write-Centered "Context reset." Yellow
+        Write-Host ""
         continue
     }
 
