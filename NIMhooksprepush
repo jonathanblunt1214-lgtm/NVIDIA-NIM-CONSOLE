@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -e
+
+echo "=================================================="
+echo "    NVIDIA NIM CONSOLE: PRE-PUSH RELEASE GATE     "
+echo "=================================================="
+
+# 1. Crucible Verification Gate Check
+if [ -f "./The-Crucible/scripts/crucible-gate.ps1" ]; then
+    powershell.exe -ExecutionPolicy Bypass -File "./The-Crucible/scripts/crucible-gate.ps1" -Target "NIM-Console" -StrictMemoryCheck
+elif [ -d "../The-Crucible" ]; then
+    powershell.exe -ExecutionPolicy Bypass -File "../The-Crucible/scripts/crucible-gate.ps1" -Target "NIM-Console" -StrictMemoryCheck
+else
+    echo "[Crucible] Directory not mounted locally. Proceeding to Council."
+fi
+
+# 2. AI Collaboration Council Review
+DIFF_CONTENT=$(git diff origin/main...HEAD 2>/dev/null || git diff HEAD~1 2>/dev/null || echo "")
+
+if [ -f "./council_gate.py" ]; then
+    echo "$DIFF_CONTENT" | python3 ./council_gate.py
+elif [ -f "../AI-collaboration-/council_gate.py" ]; then
+    echo "$DIFF_CONTENT" | python3 "../AI-collaboration-/council_gate.py"
+fi
+
+echo "All checks satisfied. Proceeding with push."
+exit 0
