@@ -1,6 +1,7 @@
 ﻿function Remove-ThinkingTrace([string]$text) {
     if (-not $text) { return "" }
-    $out = $text -replace '(?s)<think>.*?</think>', ''$out = $out -replace '(?s)Here''s a thinking process:.*?(\r?\n\r?\n\vert{}$)', ''
+    $out = $text -replace '(?s)<think>.*?</think>', ''
+    $out = $out -replace '(?s)Here''s a thinking process:.*?(\r?\n\r?\n|$)', ''
     return $out.Trim()
 }
 # =====================================================================
