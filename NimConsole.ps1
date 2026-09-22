@@ -1,3 +1,10 @@
+﻿function Get-ConsoleTimestamp {
+    $nowUtc = [DateTime]::UtcNow
+    $month = $nowUtc.Month
+    $offset = if ($month -ge 3 -and $month -lt 11) { -5 } else { -4 }
+    $localTime = $nowUtc.AddHours($offset)
+    return "[{0:yyyy-MM-dd hh:mm tt}]" -f $localTime
+}
 $ApiKey = [Environment]::GetEnvironmentVariable("NGC_API_KEY", "User");
 if ([string]::IsNullOrWhiteSpace($ApiKey)) {
     $ApiKey = "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";
@@ -98,7 +105,7 @@ while ($true) {
         if ($null -eq $reply) { break; }
 
         Write-Host "`r                  `r" -NoNewline;
-        Write-Host "AI > " -ForegroundColor Cyan;
+        Write-Host "$((Get-ConsoleTimestamp)) AI > " -ForegroundColor Cyan;
         Write-Host $reply;
         Write-Host "";
 
@@ -138,4 +145,23 @@ while ($true) {
 }
 
 
+
+
+# --- SESSION CONTEXT HYDRATION HOOK ---
+$sessionContextPath = Join-Path $PSScriptRoot "SESSION_CONTEXT.md"
+if (Test-Path $sessionContextPath) {
+    $sessionContext = Get-Content $sessionContextPath -Raw
+    $Global:SystemInstruction += "`n`n[ACTIVE HISTORICAL SESSION MEMORY]:`n$sessionContext"
+    Write-Host "[Hydrated]: Session memory and protocols loaded successfully." -ForegroundColor Green
+}
+# ---------------------------------------
+
+# --- SESSION CONTEXT HYDRATION HOOK ---
+$sessionContextPath = Join-Path $PSScriptRoot "SESSION_CONTEXT.md"
+if (Test-Path $sessionContextPath) {
+    $sessionContext = Get-Content $sessionContextPath -Raw
+    $Global:SystemInstruction += "`n`n[ACTIVE HISTORICAL SESSION MEMORY]:`n$sessionContext"
+    Write-Host "[Hydrated]: Session memory and protocols loaded successfully." -ForegroundColor Green
+}
+# ---------------------------------------
 
