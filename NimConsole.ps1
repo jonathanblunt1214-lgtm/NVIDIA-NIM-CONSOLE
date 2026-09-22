@@ -10,13 +10,6 @@ function Set-ReasoningIndicator([bool]$Active) {
     }
 }
 
-function Write-Centered([string]$Text, [ConsoleColor]$Color = [ConsoleColor]::White) {
-    $width = $Host.UI.RawUI.WindowSize.Width
-    if ($width -le 0) { $width = 80 }
-    $indent = [Math]::Max(0, [int](($width - $Text.Length) / 2))
-    Write-Host (" " * $indent + $Text) -ForegroundColor $Color
-}
-
 $ApiKey = [Environment]::GetEnvironmentVariable("NGC_API_KEY", "User")
 if ([string]::IsNullOrWhiteSpace($ApiKey)) {
     $ApiKey = [Environment]::GetEnvironmentVariable("NGC_API_KEY", "Process")
@@ -42,31 +35,38 @@ $Messages = [System.Collections.Generic.List[hashtable]]::new()
 $Messages.Add(@{ role = "system"; content = $SystemPrompt })
 
 Clear-Host
-$divider = "=" * 60
-$subDivider = "-" * 60
 
-Write-Centered $divider Green
-Write-Centered "NVIDIA NIM AGENTIC GIT CONSOLE" Green
-Write-Centered $divider Green
-Write-Centered ("Model       : " + $Model) Cyan
-Write-Centered ("Directory   : " + $CurrentDir) DarkGray
-Write-Centered ("Git Remote  : " + $GitRemote) DarkGray
-Write-Centered ("Git Branch  : " + $GitBranch) Yellow
-Write-Centered ("Time        : " + (Get-ConsoleTimestamp)) Gray
-Write-Centered "Commands    : Type 'exit' to quit, 'clear' to reset." DarkCyan
-Write-Centered $subDivider Green
-Write-Host ""
+# Calculate shared left-margin to center the entire fixed-width block cleanly
+$blockWidth = 75
+$windowWidth = $Host.UI.RawUI.WindowSize.Width
+if ($windowWidth -le 0) { $windowWidth = 100 }
+$padLeft = [Math]::Max(0, [int](($windowWidth - $blockWidth) / 2))
+$margin = " " * $padLeft
 
-while ($true) {
-    $userInput = Read-Host "You"
+$divider    = "=" * $blockWidth
+$subDivider = "-" * $blockWidth
+$title      = "NVIDIA NIM AGENTIC GIT CONSOLE"
+$titlePad   = " " * [Math]::Max(0, [int](($blockWidth - $title.Length) / 2))
+
+Write-Host "$margin$divider" -ForegroundColor Green
+Write-Host "$margin$titlePad$title" -ForegroundColor Green
+Write-Host "$margin$divider" -ForegroundColor Green
+Write-Host "$margin$('Model'.PadRight(12)): $Model" -ForegroundColor Cyan
+Write-Host "$margin$('Directory'.PadRight(12)): $CurrentDir" -ForegroundColor DarkGray
+Write-Host "$margin$('Git Remote'.PadRight(12)): $GitRemote" -ForegroundColor DarkGray
+Write-Host "$margin$('Git Branch'.PadRight(12)): $GitBranch" -ForegroundColor Yellow
+Write-Host "$margin$('Time'.PadRight(12)): $(Get-ConsoleTimestamp)" -ForegroundColor Gray
+Write-Host "$margin$('Commands'.PadRight(12)): Type 'exit' to quit, 'clear' to reset." -ForegroundColor DarkCyan
+Write-Host "$margin$subDivider`n" -ForegroundColor Green
+
+while ($true) {$userInput = Read-Host "You"
     if ([string]::IsNullOrWhiteSpace($userInput)) { continue }
     if ($userInput -eq "exit" -or $userInput -eq ":q") { break }
     if ($userInput -eq "clear") {
         $Messages.Clear()
         $Messages.Add(@{ role = "system"; content = $SystemPrompt })
         Clear-Host
-        Write-Centered "Context reset." Yellow
-        Write-Host ""
+        Write-Host "$margin[Context reset]`n" -ForegroundColor Yellow
         continue
     }
 
