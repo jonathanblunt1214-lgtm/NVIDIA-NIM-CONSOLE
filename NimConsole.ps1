@@ -69,14 +69,16 @@ function Render-Banner {
     if ($winWidth -le 0) { $winWidth = 100 }$padLeft = [Math]::Max(0, [int](($winWidth -$blockWidth) / 2))
     $margin = " " * $padLeft
 
-    $divider    = "=" * $blockWidth$subDivider = "-" * $blockWidth$title      = "NVIDIA NIM AGENTIC GIT CONSOLE"
+    $divider    = '=' * $blockWidth
+    $subDivider = '-' * $blockWidth
+    $title      = "NVIDIA NIM AGENTIC GIT CONSOLE"
     $titlePad   = " " * [Math]::Max(0, [int](($blockWidth -$title.Length) / 2))
 
     $curDir = (Get-Location).Path
     $curRemote = (git config --get remote.origin.url 2>$null)
     if (-not $curRemote) {$curRemote = "No remote configured" }
     
-    $remoteBranch = (git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>$null)
+    $remoteBranch = (git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null)
     if (-not $remoteBranch) { 
         $curBranch = (git branch --show-current 2>$null)
         $remoteBranch = "origin/$curBranch"
