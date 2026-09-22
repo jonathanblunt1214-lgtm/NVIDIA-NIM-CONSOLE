@@ -336,7 +336,7 @@ while ($true) {
             "Content-Type"  = "application/json"
         }
 
-        $res = Invoke-RestMethod -Uri $Url -Method Post -Headers $headers -Body $body -TimeoutSec 45
+        $res = Invoke-RestMethod -Uri $Url -Method Post -Headers $headers -Body $body -TimeoutSec 90
         $aiReply = $res.choices[0].message.content.Trim()
 
         Set-ReasoningIndicator $false
