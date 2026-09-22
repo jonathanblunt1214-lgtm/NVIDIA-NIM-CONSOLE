@@ -1,4 +1,11 @@
-﻿function Set-ReasoningIndicator([bool]$Active) {
+﻿function Remove-ThinkingTrace([string]$text) {
+    if (-not $text) { return "" }
+    $out =$text -replace "(?s)<think>.*?</think>", ""
+    $out =$out -replace "(?s)Here's a thinking process:.*?(\r?\n\r?\n|$)", ""
+    return $out.Trim()
+}
+
+function Set-ReasoningIndicator([bool]$Active) {
     if ($Active) {
         $Global:AnimCancel = [System.Threading.CancellationTokenSource]::new()
         $token = $Global:AnimCancel.Token
@@ -45,62 +52,6 @@
     }
 }
 
-elseif ($pos -le 0) { $pos = 0; $dir = 1 }
-
-                [System.Threading.Thread]::Sleep(45)
-            }
-
-            [System.Console]::CursorVisible = $true
-            $pad = " " * ([Math]::Max(10, [System.Console]::WindowWidth - 1))
-            [System.Console]::Write("`r" + $pad + "`r")
-        }, $token)
-    } else {
-        if ($Global:AnimCancel) {
-            $Global:AnimCancel.Cancel()
-            if ($Global:AnimTask) {
-                try { [void]$Global:AnimTask.Wait(400) } catch {}
-                try { $Global:AnimTask.Dispose() } catch {}
-                $Global:AnimTask =$null
-            }
-            try { $Global:AnimCancel.Dispose() } catch {}
-            $Global:AnimCancel =$null
-        }
-        [System.Console]::CursorVisible = $true
-            $pad = " " * ([Math]::Max(10, [System.Console]::WindowWidth - 1))
-        [System.Console]::Write("`r" + $pad + "`r")
-    }
-}
-
-elseif ($pos -le 0) { $pos = 0; $dir = 1 }
-                [System.Threading.Thread]::Sleep(45)
-            }
-            [Console]::CursorVisible = $true
-            $pad = " " * ([Math]::Max(10, [Console]::WindowWidth - 1))
-            [Console]::Write("" + $pad + "")
-        }, $token)
-    } else {
-        if ($Global:AnimCancel) {
-            $Global:AnimCancel.Cancel()
-            if ($Global:AnimTask) {
-                [void]$Global:AnimTask.Wait(500)
-                $Global:AnimTask.Dispose()
-                $Global:AnimTask = $null
-            }
-            $Global:AnimCancel.Dispose()
-            $Global:AnimCancel = $null
-        }
-        [Console]::CursorVisible = $true
-        $pad = " " * ([Math]::Max(10, [Console]::WindowWidth - 1))
-        [Console]::Write("" + $pad + "")
-    }
-}
-
-function Remove-ThinkingTrace([string]$text) {
-    if (-not $text) { return "" }
-    $out = $text -replace '(?s)<think>.*?</think>', ''
-    $out = $out -replace '(?s)Here''s a thinking process:.*?(\r?\n\r?\n|$)', ''
-    return $out.Trim()
-}
 # =====================================================================
 # ANIMATED PROGRESS BAR ENGINE (Sweeping White across Green)
 # =====================================================================
